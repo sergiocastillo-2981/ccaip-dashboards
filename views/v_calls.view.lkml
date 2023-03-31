@@ -6,13 +6,28 @@ view: v_calls {
 
  # Using Derived Table as temporary while the data gets cleaned
    derived_table: {
-     sql: SELECT distinct call_id,call_ends_at,call_type,disconnected_by
-          ,agent_info_name,photos_id,wait_duration,queue_duration,call_duration,recording_url
-          ,service_level_event,menu_path_name ,bcw_duration
-          ,acw_duration
-          FROM `ccaip-reporting-lab.ccaip_ttec_reporting.v_calls`
-       ;;
-   }
+    #sql: SELECT distinct call_id,call_ends_at,call_type,disconnected_by
+    #    ,agent_info_name,photos_id,wait_duration,queue_duration,call_duration,recording_url
+    #    ,service_level_event,menu_path_name ,bcw_duration
+    #    ,acw_duration
+    #    FROM `ccaip-reporting-lab.ccaip_ttec_reporting.v_calls`
+    # ;;
+    sql: SELECT distinct c.id as call_id,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
+          ,disconnected_by
+          ,agent_info.name as agent_info_name
+          ,p.id AS photos_id
+          ,wait_duration,c.queue_duration,c.call_duration
+          ,recording_url
+          ,qd.service_level_event
+          ,c.menu_path.name AS menu_path_name
+          ,hd.bcw_duration
+          ,hd.acw_duration
+          FROM `ccaip-reporting-lab.ccaip_ttec_reporting.t_calls` c
+          left JOIN UNNEST (c.photos) AS p
+          left JOIN UNNEST (c.queue_durations) AS qd
+          left JOIN UNNEST (c.handle_durations) AS hd
+ ;;
+  }
 
   #DIMENSIONS
    dimension: call_id {
