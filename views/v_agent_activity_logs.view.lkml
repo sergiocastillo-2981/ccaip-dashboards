@@ -83,7 +83,10 @@ view: v_agent_activity_logs {
   dimension: full_name {
     type: string
     sql: concat(${first_name},' ',${last_name}) ;;
-
+    link: {
+      label: "Agent Activity Detail"
+      url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}"
+    }
   }
 
 
