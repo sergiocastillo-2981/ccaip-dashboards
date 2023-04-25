@@ -139,7 +139,6 @@ view: v_agent_activity_logs {
   set: detail {
     fields: [
       agent_id,
-      status_name,
       last_name,
       first_name
     ]
