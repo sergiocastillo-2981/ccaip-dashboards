@@ -110,12 +110,13 @@ view: v_agent_activity_logs {
 
   measure: count {
     type: count
-    drill_fields: [detail*]
+
   }
 
   measure: count_agents {
     type: count_distinct
     sql: ${agent_id} ;;
+    drill_fields: [detail*]
   }
 
   measure: total_duration_ss {
