@@ -31,6 +31,10 @@ explore: v_calls{
   label: "Calls"
 }
 
+explore: chats {
+  label: "Chats"
+}
+
 named_value_format:HMS{
   value_format: "HH:MM:SS"
 }

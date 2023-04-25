@@ -15,27 +15,33 @@ view: v_calls {
     sql: SELECT distinct c.id as call_id,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
           ,disconnected_by
           ,agent_info.name as agent_info_name
-          ,p.id AS photos_id
+          ,virtual_agent.name as virtual_agent_name
+          ,c.status
           ,wait_duration,c.queue_duration,c.call_duration
           ,recording_url
           ,qd.service_level_event
           ,c.menu_path.name AS menu_path_name
           ,hd.bcw_duration
           ,hd.acw_duration
+          ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
+          ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
+          ,pa.type as participant_type
           FROM `ccaip-reporting-lab.ccaip_ttec_reporting.t_calls` c
           left JOIN UNNEST (c.photos) AS p
           left JOIN UNNEST (c.queue_durations) AS qd
           left JOIN UNNEST (c.handle_durations) AS hd
+          left join UNNEST (c.participants) pa
+          where pa.type != 'end_user'
  ;;
   }
 
   #DIMENSIONS
-   dimension: call_id {
-     description: "Unique ID for each call"
-      primary_key: yes
-     type: number
-     sql: ${TABLE}.call_id ;;
-   }
+  dimension: call_id {
+    description: "Unique ID for each call"
+    primary_key: yes
+    type: number
+    sql: ${TABLE}.call_id ;;
+  }
 
   dimension_group: call {
     type: time
@@ -44,6 +50,8 @@ view: v_calls {
       time,
       date,
       hour_of_day,
+      day_of_week,
+      day_of_week_index,
       week,
       month,
       quarter,
@@ -61,11 +69,6 @@ view: v_calls {
   dimension: disconnected_by {
     type: string
     sql:  INITCAP(SUBSTR(${TABLE}.disconnected_by, 17))   ;;
-  }
-
-  dimension: agent_name {
-    type: string
-    sql: ${TABLE}.agent_info_name ;;
   }
 
   dimension: menu_path {
@@ -105,26 +108,41 @@ view: v_calls {
   }
 
   dimension: handle_duration_ss {
+    description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
     type: number
-    sql: ${bcw_duration_ss}+${acw_duration_ss} ;;
+    sql: ${TABLE}.handle_duration ;;
   }
 
   dimension: handle_duration_hhmmss {
-    description: "Amount of time that elapsed from when an agent accepts a call, to when they end their wrap-up phase"
+    description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
     type: number
-    sql: ${bcw_duration_hhmmss}+${acw_duration_hhmmss} ;;
+    sql: ${handle_duration_ss}/86400.0 ;;
     value_format_name: HMS
   }
 
+  #dimension: call_duration_ss {
+  #  description: "Deprecated, use Handle Duration Instead"
+  #  type: number
+  #  sql: ${TABLE}.call_duration ;;
+  #}
 
-  dimension: call_duration_ss {
+  #dimension: call_duration_hhmmss {
+  #  description: "Deprecated, use Handle Duration Instead"
+  #  type: number
+  #  sql: ${call_duration_ss}/86400.0 ;;
+  #  value_format_name: HMS
+  #}
+
+  dimension: talk_duration_ss {
+    description: "The total time that the Agent spent talking to a consumer in Seconds"
     type: number
-    sql: ${TABLE}.call_duration ;;
+    sql: ${TABLE}.talk_duration ;;
   }
 
-  dimension: call_duration_hhmmss {
+  dimension: talk_duration_hhmmss {
+    description: "The total time that the Agent spent talking to a consumer in HH:MM:SS"
     type: number
-    sql: ${call_duration_ss}/86400.0 ;;
+    sql: ${talk_duration_ss}/86400.0 ;;
     value_format_name: HMS
   }
 
@@ -136,16 +154,17 @@ view: v_calls {
   dimension: queue_duration_hhmmss {
     type: number
     sql: ${queue_duration_ss}/86400.0 ;;
-     #value_format: "HH:MM:SS"
     value_format_name: HMS
   }
 
   dimension: wait_duration_ss {
+    description: "Deprecated, use queue_duration instead"
     type: number
     sql: ${TABLE}.wait_duration ;;
   }
 
   dimension: wait_duration_hhmmss {
+    description: "Deprecated, use queue_duration instead"
     type: number
     sql: ${wait_duration_ss}/86400.0 ;;
      #value_format: "HH:MM:SS"
@@ -157,9 +176,14 @@ view: v_calls {
     sql: ${TABLE}.service_level_event ;;
   }
 
+  dimension: status {
+    type: string
+    sql: ${TABLE}.status ;;
+  }
+
   dimension: in_sla {
     type: number
-   sql: case when ${service_level_event} = 'in_sla' then 1 else 0 end  ;;
+    sql: case when ${service_level_event} = 'in_sla' then 1 else 0 end  ;;
   }
 
   dimension: out_sla {
@@ -167,24 +191,38 @@ view: v_calls {
     sql: case when ${service_level_event} = 'not_in_sla' then 1 else 0 end  ;;
   }
 
+  dimension: agent_type {
+    type: string
+    sql: ${TABLE}.participant_type  ;;
+  }
 
+  dimension: agent_name {
+    type: string
+    sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name end ;;
+  }
+
+  ##########################################################################################
   #############################################    MEASURES  ############################
+  ##########################################################################################
   measure: count {
     type: count
     drill_fields: [call_detail*]
   }
 
-  measure: sum_call_duration_ss {
-    type: sum
-    sql: ${call_duration_ss} ;;
-  }
+  #measure: sum_call_duration_ss {
+  #  description: "Deprecated, use Handle Duration instead"
+  #  type: sum
+  #  sql: ${call_duration_ss} ;;
+  #}
 
-  measure: sum_call_duration_hhmmss {
-    type: sum
-    sql:  ${call_duration_hhmmss} ;;
-     #value_format: "HH:MM:SS"
-    value_format_name: HMS
-  }
+  #measure: sum_call_duration_hhmmss {
+  #  description: "Deprecated, use Handle Duration instead"
+  #  type: sum
+  #  sql:  ${call_duration_hhmmss} ;;
+  #   #value_format: "HH:MM:SS"
+  #  value_format_name: HMS
+  #}
+
 
   measure: percent_of_total {
     type: percent_of_total
@@ -208,7 +246,8 @@ view: v_calls {
   measure: perc_in_sla {
     label: "SLA %"
     type: number
-    sql: ${count_in_sla} / ${count} ;;
+    #sql: ${count_in_sla} / ${count} ;;
+    sql: ${count_in_sla} / (${count_in_sla} + ${count_out_sla});;
     value_format_name: percent_2
   }
 
@@ -226,13 +265,26 @@ view: v_calls {
     value_format_name: HMS
   }
 
-
   measure: avg_queue_duration_ss {
     label: "Avg Queue Time Seconds"
     type: average
     sql: ${queue_duration_ss} ;;
   }
 
+  measure: count_handled {
+    label: "Calls Handled"
+    description: "The sum of interactions (call or chat) handled by an agent."
+    type: count
+    filters: [status: "finished,failed"]
+  }
+
+  measure: perc_handled {
+    label: "Handled %"
+    description: "Calls Handled vs Calls Offered"
+    type: number
+    sql:  ${count_handled}/${count};;
+    value_format_name: percent_2
+  }
   measure: total_queue_duration_hhmmss {
     label: "Total Queue Time"
     type: sum
@@ -247,12 +299,28 @@ view: v_calls {
     value_format_name: HMS
   }
 
+  measure: total_handle_duration_hhmmss {
+    label: "Total Handle Time HH:MM:SS"
+    type: sum
+    sql: ${handle_duration_hhmmss} ;;
+    value_format_name: HMS
+  }
+
+  measure: total_wrapup_time_hhmmss {
+    label: "Wrapup Time HH:MM:SS"
+    type: sum
+    sql: ${acw_duration_hhmmss} ;;
+    value_format_name: HMS
+
+  }
+
 
 # ----- Sets of fields for drilling ------
   set: call_detail {
     fields: [
       call_id,
       call_date,
+      agent_type,
       agent_name,
       call_type
     ]
@@ -260,51 +328,4 @@ view: v_calls {
 
 
 
-  # dimension: lifetime_orders {
-  #   description: "The total number of orders for each user"
-  #   type: number
-  #   sql: ${TABLE}.lifetime_orders ;;
-  # }
-  #
-  # dimension_group: most_recent_purchase {
-  #   description: "The date when each user last ordered"
-  #   type: time
-  #   timeframes: [date, week, month, year]
-  #   sql: ${TABLE}.most_recent_purchase_at ;;
-  # }
-  #
-  # measure: total_lifetime_orders {
-  #   description: "Use this for counting lifetime orders across many users"
-  #   type: sum
-  #   sql: ${lifetime_orders} ;;
-  # }
 }
-
-
-#
-#   # Define your dimensions and measures here, like this:
-#   dimension: user_id {
-#     description: "Unique ID for each user that has ordered"
-#     type: number
-#     sql: ${TABLE}.user_id ;;
-#   }
-#
-#   dimension: lifetime_orders {
-#     description: "The total number of orders for each user"
-#     type: number
-#     sql: ${TABLE}.lifetime_orders ;;
-#   }
-#
-#   dimension_group: most_recent_purchase {
-#     description: "The date when each user last ordered"
-#     type: time
-#     timeframes: [date, week, month, year]
-#     sql: ${TABLE}.most_recent_purchase_at ;;
-#   }
-#
-#   measure: total_lifetime_orders {
-#     description: "Use this for counting lifetime orders across many users"
-#     type: sum
-#     sql: ${lifetime_orders} ;;
-#   }
-# }
