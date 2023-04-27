@@ -31,10 +31,10 @@ view: v_agent_activity_logs {
   dimension: agent_id {
     type: number
     sql: ${TABLE}.agent_id ;;
-    link: {
-      label: "Agent Activity Detail"
-      url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ value }}"
-    }
+    #link: {
+    #  label: "Agent Activity Detail"
+    #  url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ value }}"
+    #}
   }
 
   dimension: call_id {
@@ -51,6 +51,13 @@ view: v_agent_activity_logs {
     type: number
     sql: ${TABLE}.duration ;;
   }
+
+  dimension: duration_hhmmss {
+    type: number
+    sql: ${duration}/86400.0 ;;
+    value_format_name:HMS
+  }
+
 
 
   # Dates and timestamps can be represented in Looker using a dimension group of type: time.
@@ -85,7 +92,9 @@ view: v_agent_activity_logs {
     sql: concat(${first_name},' ',${last_name}) ;;
     link: {
       label: "Agent Activity Detail"
-      url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}"
+      #url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}"
+      url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}&Activity+Date={{_filters['v_agent_activity_logs.activity_date']|url_encode}}"
+
     }
   }
 
