@@ -34,6 +34,9 @@ view: v_calls {
           where pa.type != 'end_user'
  ;;
   }
+  #tables with data to test
+  #`ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls`
+  #`ccaip-reporting-lab.ccaip_ttec_reporting.t_calls`
 
   #DIMENSIONS
   dimension: call_id {
