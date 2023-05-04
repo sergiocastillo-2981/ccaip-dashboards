@@ -15,8 +15,9 @@ view: v_calls {
     sql: SELECT distinct c.id as call_id,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
           ,disconnected_by
           ,agent_info.name as agent_info_name
-          ,virtual_agent.name as virtual_agent_name
-          ,c.status
+          --,virtual_agent.name as virtual_agent_name --when virtual agent enabled
+          ,cast(virtual_agent as string) as virtual_agent_name        --when virtual agent not enabled
+          ,c.status,c.fail_reason,c.fail_details
           ,wait_duration,c.queue_duration,c.call_duration
           ,recording_url
           ,qd.service_level_event
@@ -25,13 +26,12 @@ view: v_calls {
           ,hd.acw_duration
           ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
           ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
-          ,pa.type as participant_type
-          FROM `ccaip-reporting-lab.ccaip_ttec_reporting.t_calls` c
+          ,ifnull(pa.type,'no_agent') as participant_type
+          FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
           left JOIN UNNEST (c.photos) AS p
           left JOIN UNNEST (c.queue_durations) AS qd
           left JOIN UNNEST (c.handle_durations) AS hd
-          left join UNNEST (c.participants) pa
-          where pa.type != 'end_user'
+          left join UNNEST (c.participants) pa on pa.type != 'end_user'
  ;;
   }
   #tables with data to test
@@ -201,7 +201,20 @@ view: v_calls {
 
   dimension: agent_name {
     type: string
-    sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name end ;;
+    sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
+  }
+
+  dimension: fail_reason {
+    description: " Description for a call that ended before successfully connected"
+    type: string
+    sql:  ${TABLE}.fail_reason ;;
+
+  }
+
+  dimension: fail_details {
+    description: " Description of failure for a call that ended before successfully connected"
+    type: string
+    sql:  ${TABLE}.fail_details ;;
   }
 
   ##########################################################################################
@@ -244,6 +257,13 @@ view: v_calls {
     type: sum
     sql: ${out_sla} ;;
 
+  }
+
+  measure: count_abandoned {
+    description: "The sum of calls that were abandoned by the consumer while waiting in queue"
+    type: count
+    filters: [fail_reason: "eu_abandoned"]
+    drill_fields: [call_detail_abandoned*]
   }
 
   measure: perc_in_sla {
@@ -326,10 +346,23 @@ view: v_calls {
       call_date,
       agent_type,
       agent_name,
-      call_type
+      call_type,
+      status
     ]
   }
 
+  set: call_detail_abandoned {
+    fields: [
+      call_id,
+      call_date,
+      agent_type,
+      agent_name,
+      call_type,
+      status,
+      fail_reason,
+      fail_details
+    ]
+  }
 
 
 }
