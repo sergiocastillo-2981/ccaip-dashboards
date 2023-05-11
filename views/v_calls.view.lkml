@@ -100,11 +100,13 @@ view: v_calls {
   }
 
   dimension: bcw_duration_ss {
+    group_label: "Durations"
     type: number
     sql: ${TABLE}.bcw_duration ;;
   }
 
   dimension: bcw_duration_hhmmss {
+    group_label: "Durations"
     type: number
     sql: ${bcw_duration_ss}/86400.0 ;;
     value_format_name: HMS
@@ -112,12 +114,14 @@ view: v_calls {
 
   dimension: handle_duration_ss {
     description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
+    group_label: "Durations"
     type: number
     sql: ${TABLE}.handle_duration ;;
   }
 
   dimension: handle_duration_hhmmss {
     description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
+    group_label: "Durations"
     type: number
     sql: ${handle_duration_ss}/86400.0 ;;
     value_format_name: HMS
@@ -138,41 +142,47 @@ view: v_calls {
 
   dimension: talk_duration_ss {
     description: "The total time that the Agent spent talking to a consumer in Seconds"
+    group_label: "Durations"
     type: number
     sql: ${TABLE}.talk_duration ;;
   }
 
   dimension: talk_duration_hhmmss {
     description: "The total time that the Agent spent talking to a consumer in HH:MM:SS"
+    group_label: "Durations"
     type: number
     sql: ${talk_duration_ss}/86400.0 ;;
     value_format_name: HMS
   }
 
   dimension: queue_duration_ss {
+    description: "Time spent waiting in Queue, also known as Wait Time"
+    group_label: "Durations"
     type: number
     sql: ${TABLE}.queue_duration ;;
   }
 
   dimension: queue_duration_hhmmss {
+    description: "Time spent waiting in Queue, also known as Wait Time"
+    group_label: "Durations"
     type: number
     sql: ${queue_duration_ss}/86400.0 ;;
     value_format_name: HMS
   }
 
-  dimension: wait_duration_ss {
-    description: "Deprecated, use queue_duration instead"
-    type: number
-    sql: ${TABLE}.wait_duration ;;
-  }
+  #dimension: wait_duration_ss {
+  #  description: "Deprecated, use queue_duration instead"
+  #  type: number
+  #  sql: ${TABLE}.wait_duration ;;
+  #}
 
-  dimension: wait_duration_hhmmss {
-    description: "Deprecated, use queue_duration instead"
-    type: number
-    sql: ${wait_duration_ss}/86400.0 ;;
-     #value_format: "HH:MM:SS"
-    value_format_name: HMS
-  }
+  #dimension: wait_duration_hhmmss {
+  #  description: "Deprecated, use queue_duration instead"
+  #  type: number
+  #  sql: ${wait_duration_ss}/86400.0 ;;
+  #   #value_format: "HH:MM:SS"
+  #  value_format_name: HMS
+  #}
 
   dimension: service_level_event {
     type: string
@@ -180,6 +190,7 @@ view: v_calls {
   }
 
   dimension: status {
+    description: "The possible values are: scheduled, queued, assigned, connecting, switching, connected, finished, failed, recovered, deflected, selecting, action_only, action_only_finished, voicemail, voicemail_received, voicemail_read"
     type: string
     sql: ${TABLE}.status ;;
   }
@@ -259,11 +270,17 @@ view: v_calls {
 
   }
 
+  measure: count_non_sla {
+    description: "Count of calls that didnt get SLA recorded"
+    type: count
+    filters: [service_level_event: "-in_sla,-not_in_sla"]
+  }
+
   measure: count_abandoned {
     description: "The sum of calls that were abandoned by the consumer while waiting in queue"
     type: count
     filters: [fail_reason: "eu_abandoned"]
-    drill_fields: [call_detail_abandoned*]
+    drill_fields: [call_detail*,fail_reason,fail_details]
   }
 
   measure: perc_in_sla {
@@ -351,18 +368,18 @@ view: v_calls {
     ]
   }
 
-  set: call_detail_abandoned {
-    fields: [
-      call_id,
-      call_date,
-      agent_type,
-      agent_name,
-      call_type,
-      status,
-      fail_reason,
-      fail_details
-    ]
-  }
+  #set: call_detail_abandoned {
+  #  fields: [
+  #    call_id,
+  #    call_date,
+  #    agent_type,
+  #    agent_name,
+  #    call_type,
+  #    status,
+  #    fail_reason,
+  #    fail_details
+  #  ]
+  #}
 
 
 }
