@@ -77,7 +77,7 @@
     filters: [interaction_category: "call"]
     link:
     {
-      label: "Recording URL"
+      label: "Calls Dashboard"
       url: "https://ttec.cloud.looker.com/dashboards/170"
     }
   }
@@ -90,7 +90,7 @@
     filters: [interaction_category: "chat"]
     link:
     {
-      label: "Recording URL"
+      label: "Chats Dashboard"
       url: "https://ttec.cloud.looker.com/dashboards/187"
     }
   }
