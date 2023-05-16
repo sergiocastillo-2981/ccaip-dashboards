@@ -9,6 +9,7 @@ view: chats {
           ,c.status
           ,c.fail_reason
           ,agent_info.name as agent_name
+          ,qd.transfer
           ,c.queue_duration
           ,qd.service_level_event
           ,c.menu_path.name AS menu_path_name
@@ -50,6 +51,11 @@ view: chats {
   dimension: chat_type {
     type: string
     sql: ${TABLE}.chat_type ;;
+  }
+
+  dimension: transfer {
+    type: yesno
+    sql: ${TABLE}.transfer ;;
   }
 
   dimension: chat_language {
@@ -120,16 +126,49 @@ view: chats {
     drill_fields: [chat_detail*]
   }
 
+
   measure: count_in_sla {
+    label: "Count In SLA"
+    description: "Count of chat queue durations where queued time is less than the SLA threshold"
     type: count
     drill_fields: [chat_detail*]
     filters: [service_level_event: "in_sla"]
   }
 
   measure: count_out_sla {
+    label: "Count Out SLA"
+    description: "Count of call queue durations where queued time is equal to or greater than the SLA threshold."
     type: count
     drill_fields: [chat_detail*]
     filters: [service_level_event: "not_in_sla"]
+  }
+
+  measure: count_non_sla {
+    label: "Count Non SLA"
+    description: "Count of calls that didnt get SLA recorded"
+    type: count
+    filters: [service_level_event: "-in_sla,-not_in_sla"]
+    drill_fields: [chat_detail*]
+  }
+
+  measure: perc_in_sla
+  {
+    label: "SLA %"
+    description: "Count of calls In SLA /(Count of calls  In SLA + count of calls Out SLA"
+    type: number
+    #sql: ${count_in_sla} / ${count} ;;
+    sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else ${count_in_sla} / (${count_in_sla} + ${count_out_sla}) end;;
+    value_format_name: percent_2
+  }
+
+  measure: num_transfers
+  {
+    label: "Transfers"
+    description: "Total Number of Transfers "
+    type: count
+    filters: [transfer: "Yes"]
+    #drill_fields: [transfer_type,agent_id]
+    value_format_name: decimal_0
   }
 
   #####################################################################################
