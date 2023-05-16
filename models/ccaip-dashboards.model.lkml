@@ -35,6 +35,10 @@ explore: chats {
   label: "Chats"
 }
 
+explore: overal_metrics {
+  label: "Overal Metrics"
+}
+
 named_value_format:HMS{
   value_format: "HH:MM:SS"
 }
