@@ -43,6 +43,7 @@ view: v_calls {
     description: "Unique ID for each call"
     primary_key: yes
     type: number
+    value_format: "#######"
     sql: ${TABLE}.call_id ;;
   }
 
