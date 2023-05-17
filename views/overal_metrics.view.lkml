@@ -53,6 +53,24 @@
     sql: ${TABLE}.interaction_id ;;
   }
 
+  dimension_group: interaction {
+    type: time
+    timeframes: [
+      raw,
+      time,
+      date,
+      hour_of_day,
+      day_of_week,
+      day_of_week_index,
+      week,
+      month,
+      quarter,
+      year
+    ]
+    sql: ${TABLE}.chat_ends_at ;;
+    #drill_fields: [chat_detail*]
+  }
+
   dimension: interaction_category
   {
     description: "Identifies each interaction as either chat or call"
@@ -84,14 +102,15 @@
 
   measure: chat_count
   {
-    label: "Total Calls"
-    description: "Total number of calls within the selected time frame"
+    label: "Total Chats"
+    description: "Total number of chats within the selected time frame"
     type: count
     filters: [interaction_category: "chat"]
     link:
     {
       label: "Chats Dashboard"
-      url: "https://ttec.cloud.looker.com/dashboards/187"
+      #url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}&Activity+Date={{_filters['v_agent_activity_logs.activity_date']|url_encode}}"
+      url: "https://ttec.cloud.looker.com/dashboards/187?Call+Date={{_filters['overal_metrics.interaction_date']|url_encode}}"
     }
   }
 }
