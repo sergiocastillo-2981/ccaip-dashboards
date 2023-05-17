@@ -67,7 +67,7 @@
       quarter,
       year
     ]
-    sql: ${TABLE}.chat_ends_at ;;
+    sql: ${TABLE}.ended_at ;;
     #drill_fields: [chat_detail*]
   }
 
