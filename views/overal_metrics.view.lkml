@@ -78,6 +78,14 @@
     sql: ${TABLE}.interaction_category ;;
   }
 
+  dimension: interaction_type
+  {
+    description: "Type on the interaction"
+    type: string
+    sql: ${TABLE}.interaction_type ;;
+
+  }
+
   ####################################################################################
   ####################################    MEASURES   #################################
   ####################################################################################
@@ -96,7 +104,7 @@
     link:
     {
       label: "Calls Dashboard"
-      url: "https://ttec.cloud.looker.com/dashboards/170"
+      url: "https://ttec.cloud.looker.com/dashboards/170?Call+Date={{_filters['overal_metrics.interaction_date']|url_encode}}"
     }
   }
 
