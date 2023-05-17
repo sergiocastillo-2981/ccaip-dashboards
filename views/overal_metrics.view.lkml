@@ -110,7 +110,7 @@
     {
       label: "Chats Dashboard"
       #url: "https://ttec.cloud.looker.com/dashboards/171?Agent+ID={{ v_agent_activity_logs.agent_id._value }}&Activity+Date={{_filters['v_agent_activity_logs.activity_date']|url_encode}}"
-      url: "https://ttec.cloud.looker.com/dashboards/187?Call+Date={{_filters['overal_metrics.interaction_date']|url_encode}}"
+      url: "https://ttec.cloud.looker.com/dashboards/187?Chat+Date={{_filters['overal_metrics.interaction_date']|url_encode}}"
     }
   }
 }
