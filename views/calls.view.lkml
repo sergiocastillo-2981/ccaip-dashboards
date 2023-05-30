@@ -1,6 +1,6 @@
 view: v_calls {
   label: "Calls"
-  # This is the table we will use in prod
+
   # sql_table_name: `ccaip-reporting-lab.ccaip_ttec_reporting.v_calls` ;;
 
 
@@ -12,27 +12,60 @@ view: v_calls {
     #    ,acw_duration
     #    FROM `ccaip-reporting-lab.ccaip_ttec_reporting.v_calls`
     # ;;
-    sql: SELECT distinct c.id as call_id,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
-          ,disconnected_by
-          ,agent_info.name as agent_info_name
-          --,virtual_agent.name as virtual_agent_name --when virtual agent enabled
-          ,cast(virtual_agent as string) as virtual_agent_name        --when virtual agent not enabled
-          ,c.status,c.fail_reason,c.fail_details
-          ,wait_duration,c.queue_duration,c.call_duration
-          ,recording_url
-          ,qd.service_level_event
-          ,c.menu_path.name AS menu_path_name
-          ,hd.bcw_duration
-          ,hd.acw_duration
-          ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
-          ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
-          ,ifnull(pa.type,'no_agent') as participant_type
-          FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
-          left JOIN UNNEST (c.photos) AS p
-          left JOIN UNNEST (c.queue_durations) AS qd
-          left JOIN UNNEST (c.handle_durations) AS hd
-          left join UNNEST (c.participants) pa on pa.type != 'end_user'
- ;;
+    #sql: SELECT distinct c.id as call_id,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
+    #      ,disconnected_by
+    ##      ,agent_info.name as agent_info_name
+    #      --,virtual_agent.name as virtual_agent_name --when virtual agent enabled
+    #      ,cast(virtual_agent as string) as virtual_agent_name        --when virtual agent not enabled
+    #      ,c.status,c.fail_reason,c.fail_details
+    #      ,wait_duration,c.queue_duration,c.call_duration
+    #      ,recording_url
+    #      ,qd.service_level_event
+    ##      ,c.menu_path.name AS menu_path_name
+    #      ,hd.bcw_duration
+    #      ,hd.acw_duration
+    #      ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
+    #      ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
+    #      ,ifnull(pa.type,'no_agent') as participant_type
+    #      FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
+    #      left JOIN UNNEST (c.photos) AS p
+    #      left JOIN UNNEST (c.queue_durations) AS qd
+    #      left JOIN UNNEST (c.handle_durations) AS hd
+    #      left join UNNEST (c.participants) pa on pa.type != 'end_user'
+    sql: SELECT  distinct c.id as call_id
+  ,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
+  ,disconnected_by
+  ,agent_info.name as agent_info_name
+  --,cast(virtual_agent as string) as virtual_agent_name        --when virtual agent not enabled
+  ,c.status,c.fail_reason,c.fail_details
+  ,wait_duration,c.queue_duration,c.call_duration
+  ,recording_url
+  ,qd.service_level_event
+  ,c.menu_path.name AS menu_path_name
+  ,sum(hd.bcw_duration)bcw_duration
+  ,sum(hd.acw_duration)acw_duration
+  ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
+  ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
+  --,ifnull(pa.type,'no_agent') as participant_type
+  FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_prev3calls` c
+  left JOIN UNNEST (c.queue_durations) AS qd
+  left JOIN UNNEST (c.handle_durations) AS hd
+  --left join UNNEST (c.participants) pa on pa.type != 'end_user'
+
+  group by
+   c.id
+  ,c.ends_at
+  ,call_type
+  ,disconnected_by
+  ,agent_info.name
+  ,cast(virtual_agent as string)
+  ,c.status,c.fail_reason,c.fail_details
+  ,wait_duration,c.queue_duration,c.call_duration
+  ,recording_url
+  ,qd.service_level_event
+  ,c.menu_path.name
+  ,c.assigned_at
+  ,c.connected_at  ;;
   }
   #tables with data to test
   #`ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls`
@@ -206,14 +239,15 @@ view: v_calls {
     sql: case when ${service_level_event} = 'not_in_sla' then 1 else 0 end  ;;
   }
 
-  dimension: agent_type {
-    type: string
-    sql: ${TABLE}.participant_type  ;;
-  }
+  #dimension: agent_type {
+  #  type: string
+  #  sql: ${TABLE}.participant_type  ;;
+  #}
 
   dimension: agent_name {
     type: string
-    sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
+    #sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
+    sql: ${TABLE}.agent_info_name ;;
   }
 
   dimension: fail_reason {
@@ -293,6 +327,15 @@ view: v_calls {
     value_format_name: percent_2
   }
 
+  measure: perc_in_sla_numeric {
+    label: "SLA Numeric%"
+    description: "Count of calls In SLA /(Count of calls  In SLA + count of calls Out SLA"
+    type: number
+    #sql: ${count_in_sla} / ${count} ;;
+    sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else (${count_in_sla} / (${count_in_sla} + ${count_out_sla}) )*100.0 end;;
+
+  }
+
   measure: max_queue_duration_hhmmss {
     label: "Max Queue Time HH:MM:SS"
     type: max
@@ -362,7 +405,7 @@ view: v_calls {
     fields: [
       call_id,
       call_date,
-      agent_type,
+      #agent_type,
       agent_name,
       call_type,
       status
