@@ -14,7 +14,7 @@ view: overal_metrics
       ,c.fail_reason
       ,c.wait_duration
       ,c.queue_duration
-      ,qd.service_level_event
+      ,,ifnull(qd.service_level_event,'not_recorded') service_level_event
       ,c.menu_path.name AS menu_path_name
       ,sum(hd.acw_duration)acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
@@ -128,7 +128,6 @@ view: overal_metrics
     }
   }
 
-
   measure: count_in_sla {
     label: "Count In SLA"
     description: "Count of chat queue durations where queued time is less than the SLA threshold"
@@ -144,8 +143,6 @@ view: overal_metrics
     #drill_fields: [chat_detail*]
     filters: [service_level_event: "not_in_sla"]
   }
-
-
 
   measure: chat_count
   {
