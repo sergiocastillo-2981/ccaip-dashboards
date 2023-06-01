@@ -88,7 +88,8 @@ view: v_calls
   dimension: recording_url
   {
     sql: ${TABLE}.recording_url ;;
-    link: {
+    link:
+    {
       label: "Recording URL"
       url: "{{value}}"
       icon_url: "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL"

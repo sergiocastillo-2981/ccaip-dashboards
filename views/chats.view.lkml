@@ -154,12 +154,23 @@ view: chats {
   measure: perc_in_sla
   {
     label: "SLA %"
-    description: "Count of calls In SLA /(Count of calls  In SLA + count of calls Out SLA"
+    description: "Count of chats In SLA /(Count of chats  In SLA + count of chats Out SLA"
     type: number
     #sql: ${count_in_sla} / ${count} ;;
     sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else ${count_in_sla} / (${count_in_sla} + ${count_out_sla}) end;;
     value_format_name: percent_2
   }
+
+  measure: perc_in_sla_numeric
+  {
+    label: "SLA Numeric%"
+    description: "Count of chats In SLA /(Count of chats  In SLA + count of chats Out SLA"
+    type: number
+    #sql: ${count_in_sla} / ${count} ;;
+    sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else (${count_in_sla} / (${count_in_sla} + ${count_out_sla}) )*100.0 end;;
+
+  }
+
 
   measure: num_transfers
   {

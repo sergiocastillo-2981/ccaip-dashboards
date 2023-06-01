@@ -32,7 +32,7 @@ view: overal_metrics
         ,c.status,c.fail_reason,c.fail_details
         ,wait_duration,c.queue_duration,c.call_duration
         ,recording_url
-        ,qd.service_level_event
+        ,ifnull(qd.service_level_event,'not_recorded') service_level_event
         ,c.menu_path.name
         ,c.assigned_at
         ,c.connected_at
@@ -48,7 +48,7 @@ view: overal_metrics
       ,c.fail_reason
       ,c.wait_duration
       ,c.queue_duration
-      ,qd.service_level_event
+      ,ifnull(qd.service_level_event,'not_recorded') service_level_event
       ,c.menu_path.name AS menu_path_name
       ,hd.acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
@@ -99,7 +99,11 @@ view: overal_metrics
     description: "Type on the interaction"
     type: string
     sql: ${TABLE}.interaction_type ;;
+  }
 
+  dimension: service_level_event {
+    type: string
+    sql: ${TABLE}.service_level_event ;;
   }
 
   ####################################################################################
@@ -124,6 +128,25 @@ view: overal_metrics
     }
   }
 
+
+  measure: count_in_sla {
+    label: "Count In SLA"
+    description: "Count of chat queue durations where queued time is less than the SLA threshold"
+    type: count
+    #drill_fields: [chat_detail*]
+    filters: [service_level_event: "in_sla"]
+  }
+
+  measure: count_out_sla {
+    label: "Count Out SLA"
+    description: "Count of call queue durations where queued time is equal to or greater than the SLA threshold."
+    type: count
+    #drill_fields: [chat_detail*]
+    filters: [service_level_event: "not_in_sla"]
+  }
+
+
+
   measure: chat_count
   {
     label: "Total Chats"
@@ -137,4 +160,15 @@ view: overal_metrics
       url: "https://ttec.cloud.looker.com/dashboards/187?Chat+Date={{_filters['overal_metrics.interaction_date']|url_encode}}"
     }
   }
+
+  measure: perc_in_sla
+  {
+    label: "SLA %"
+    description: "Count of chats In SLA /(Count of chats  In SLA + count of chats Out SLA"
+    type: number
+    #sql: ${count_in_sla} / ${count} ;;
+    sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else ${count_in_sla} / (${count_in_sla} + ${count_out_sla}) end;;
+    value_format_name: percent_2
+  }
+
 }
