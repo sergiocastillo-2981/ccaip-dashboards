@@ -5,8 +5,8 @@ view: v_agent_activity_logs {
   # to be used for all fields in this view.
   #sql_table_name: `ccaip-reporting-lab.ccaip_ttec_reporting.v_agent_activity_logs`;;
   derived_table: {
-    sql: SELECT id,agent_id,first_name,last_name,started_at,ended_at,duration,call_id,chat_id,status_name,activity
-    FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.v_agent_activity_logs`
+    sql: SELECT log_id id,agent_id,first_name,last_name,started_at,ended_at,duration,call_id,chat_id,status_name,activity
+FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.fmv_agent_activity_logs`
     where duration < 86400;;
   }
   drill_fields: [id]
@@ -29,7 +29,7 @@ view: v_agent_activity_logs {
   }
 
   dimension: agent_id {
-    type: number
+    type: string
     sql: ${TABLE}.agent_id ;;
     #link: {
     #  label: "Agent Activity Detail"
@@ -47,15 +47,21 @@ view: v_agent_activity_logs {
     sql: ${TABLE}.chat_id ;;
   }
 
-  dimension: duration {
+  dimension: duration_ss {
     type: number
     sql: ${TABLE}.duration ;;
   }
 
   dimension: duration_hhmmss {
     type: number
-    sql: ${duration}/86400.0 ;;
+    sql: ${duration_ss}/86400.0 ;;
     value_format_name:HMS
+  }
+
+  dimension: duration_hours {
+    type: number
+    sql: (${duration_ss}/60.0)/60.0 ;;
+    value_format_name: decimal_2
   }
 
 
@@ -133,7 +139,13 @@ view: v_agent_activity_logs {
 
   measure: total_duration_ss {
     type: sum
-    sql: ${duration} ;;
+    sql: ${duration_ss} ;;
+  }
+
+  measure: total_duration_hours {
+    type: sum
+    sql: (${duration_ss}/60.0)/60.0 ;;
+    value_format_name: decimal_2
   }
 
   measure: total_duration_hhmmss {
@@ -142,10 +154,18 @@ view: v_agent_activity_logs {
     value_format: "HH:MM:SS"
   }
 
-  measure: average_duration {
+  measure: average_duration_hours {
     type: average
-    sql: ${duration} ;;
+    sql: ${duration_hours} ;;
   }
+
+
+  measure: percent_of_total_duration {
+    type: percent_of_total
+    sql: ${total_duration_hours} ;;
+    #value_format: "##.##"
+  }
+
 
   # ----- Sets of fields for drilling ------
   set: detail {
