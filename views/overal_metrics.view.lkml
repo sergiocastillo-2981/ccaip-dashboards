@@ -18,7 +18,7 @@ view: overal_metrics
       ,c.menu_path.name AS menu_path_name
       ,sum(hd.acw_duration)acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
-      FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
+      FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_prev3calls` c
       left JOIN UNNEST (c.queue_durations) AS qd
       left JOIN UNNEST (c.handle_durations) AS hd
       group by
@@ -32,7 +32,7 @@ view: overal_metrics
         ,c.status,c.fail_reason,c.fail_details
         ,wait_duration,c.queue_duration,c.call_duration
         ,recording_url
-        ,ifnull(qd.service_level_event,'not_recorded') service_level_event
+        ,ifnull(qd.service_level_event,'not_recorded')
         ,c.menu_path.name
         ,c.assigned_at
         ,c.connected_at
