@@ -241,7 +241,7 @@ view: v_calls
 
   dimension: fail_reason
   {
-    description: " Description for a call that ended before successfully connected"
+    description: "Description for a call that ended before successfully connected"
     type: string
     sql:  ${TABLE}.fail_reason ;;
 
@@ -255,7 +255,7 @@ view: v_calls
   }
 
   ##########################################################################################
-  #############################################    MEASURES  ############################
+  #############################################    MEASURES  ###############################
   ##########################################################################################
   measure: count {
     type: count

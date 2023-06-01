@@ -14,7 +14,7 @@ view: overal_metrics
       ,c.fail_reason
       ,c.wait_duration
       ,c.queue_duration
-      ,,ifnull(qd.service_level_event,'not_recorded') service_level_event
+      ,ifnull(qd.service_level_event,'not_recorded') service_level_event
       ,c.menu_path.name AS menu_path_name
       ,sum(hd.acw_duration)acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
@@ -106,6 +106,40 @@ view: overal_metrics
     sql: ${TABLE}.service_level_event ;;
   }
 
+  dimension: status
+  {
+    description: "The possible values are: scheduled, queued, assigned, connecting, switching, connected, finished, failed, recovered, deflected, selecting, action_only, action_only_finished, voicemail, voicemail_received, voicemail_read"
+    type: string
+    sql: ${TABLE}.status ;;
+  }
+
+  dimension: fail_reason
+  {
+    description: " Description for a call that ended before successfully connected"
+    type: string
+    sql:  ${TABLE}.fail_reason ;;
+
+  }
+
+  dimension: handle_duration_ss
+  {
+    description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
+    group_label: "Durations"
+    type: number
+    sql: ${TABLE}.handle_duration ;;
+  }
+
+
+  dimension: handle_duration_hhmmss
+  {
+    description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
+    group_label: "Durations"
+    type: number
+    sql: ${handle_duration_ss}/86400.0 ;;
+    value_format_name: HMS
+  }
+
+
   ####################################################################################
   ####################################    MEASURES   #################################
   ####################################################################################
@@ -166,6 +200,48 @@ view: overal_metrics
     #sql: ${count_in_sla} / ${count} ;;
     sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else ${count_in_sla} / (${count_in_sla} + ${count_out_sla}) end;;
     value_format_name: percent_2
+  }
+
+  measure: count_handled
+  {
+    label: "Calls Handled"
+    description: "The sum of interactions (call or chat) handled by an agent."
+    type: count
+    filters: [status: "finished,failed"]
+  }
+
+  measure: perc_handled
+  {
+    label: "Handled %"
+    description: "Contacts Handled vs Calls Offered"
+    type: number
+    sql:  ${count_handled}/${count};;
+    value_format_name: percent_2
+  }
+
+  measure: count_abandoned
+  {
+    description: "The sum of calls that were abandoned by the consumer while waiting in queue"
+    type: count
+    filters: [fail_reason: "eu_abandoned"]
+    #drill_fields: [call_detail*,fail_reason,fail_details]
+  }
+
+  measure: perc_abandoned
+  {
+    label: "Abandoned %"
+    description: "Contacts Abandoned vs Calls Offered"
+    type: number
+    sql:  ${count_abandoned}/${count};;
+    value_format_name: percent_2
+  }
+
+  measure: avg_handle_duration_hhmmss
+  {
+    label: "Avg Handle Time HH:MM:SS"
+    type: average
+    sql: ${handle_duration_hhmmss} ;;
+    value_format_name: HMS
   }
 
 }
