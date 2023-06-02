@@ -15,12 +15,17 @@ view: overal_metrics
       ,c.wait_duration
       ,c.queue_duration
       ,ifnull(qd.service_level_event,'not_recorded') service_level_event
+      ,qd.transfer
       ,c.menu_path.name AS menu_path_name
       ,sum(hd.acw_duration)acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
-      FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_prev3calls` c
+      ,mt.l1_id,mt.l1_name
+      ,mt.l2_id,mt.l2_name
+      ,mt.l3_id,mt.l3_name
+      FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
       left JOIN UNNEST (c.queue_durations) AS qd
       left JOIN UNNEST (c.handle_durations) AS hd
+      left join `ccaip-reporting-lab.ccaip_laseraway_reporting.v_menu_tree_leveling` as mt on c.selected_menu.id = mt.l3_id
       group by
         c.id
         ,c.ends_at
@@ -33,6 +38,7 @@ view: overal_metrics
         ,wait_duration,c.queue_duration,c.call_duration
         ,recording_url
         ,ifnull(qd.service_level_event,'not_recorded')
+        ,qd.transfer
         ,c.menu_path.name
         ,c.assigned_at
         ,c.connected_at
@@ -49,12 +55,18 @@ view: overal_metrics
       ,c.wait_duration
       ,c.queue_duration
       ,ifnull(qd.service_level_event,'not_recorded') service_level_event
+      ,qd.transfer
       ,c.menu_path.name AS menu_path_name
       ,hd.acw_duration
       ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
+      ,mt.l1_id,mt.l1_name
+      ,mt.l2_id,mt.l2_name
+      ,mt.l3_id,mt.l3_name
       FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_chats` c
       left JOIN UNNEST (c.queue_durations) AS qd
-      left JOIN UNNEST (c.handle_durations) AS hd    ;;
+      left JOIN UNNEST (c.handle_durations) AS hd
+      left join `ccaip-reporting-lab.ccaip_laseraway_reporting.v_menu_tree_leveling` as mt on c.selected_menu.id = mt.l3_id
+      ;;
   }
 
   ####################################################################################
@@ -121,7 +133,7 @@ view: overal_metrics
 
   }
 
-  dimension: handle_duration_ss
+  dimension: handle_time_ss
   {
     description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
     group_label: "Durations"
@@ -129,14 +141,35 @@ view: overal_metrics
     sql: ${TABLE}.handle_duration ;;
   }
 
-
-  dimension: handle_duration_hhmmss
+  dimension: handle_time_hhmmss
   {
     description: "Amount of time that elapsed from when an agent was assigned a call, to when they ended their wrap-up phase"
     group_label: "Durations"
     type: number
-    sql: ${handle_duration_ss}/86400.0 ;;
+    sql: ${handle_time_ss}/86400.0 ;;
     value_format_name: HMS
+  }
+
+  dimension: queue_time_ss
+  {
+    description: "Time spent waiting in Queue, also known as Wait Time"
+    group_label: "Durations"
+    type: number
+    sql: ${TABLE}.queue_duration ;;
+  }
+
+  dimension: queue_time_hhmmss
+  {
+    description: "Time spent waiting in Queue, also known as Wait Time"
+    group_label: "Durations"
+    type: number
+    sql: ${queue_time_ss}/86400.0 ;;
+    value_format_name: HMS
+  }
+
+  dimension: transfer {
+    type: yesno
+    sql: ${TABLE}.transfer ;;
   }
 
 
@@ -195,7 +228,7 @@ view: overal_metrics
   measure: perc_in_sla
   {
     label: "SLA %"
-    description: "Count of chats In SLA /(Count of chats  In SLA + count of chats Out SLA"
+    description: "Count of Contacts In SLA /(Count of Contacts  In SLA + count of Contacts Out SLA"
     type: number
     #sql: ${count_in_sla} / ${count} ;;
     sql: case when (${count_in_sla} + ${count_out_sla}) = 0 then 0 else ${count_in_sla} / (${count_in_sla} + ${count_out_sla}) end;;
@@ -204,8 +237,8 @@ view: overal_metrics
 
   measure: count_handled
   {
-    label: "Calls Handled"
-    description: "The sum of interactions (call or chat) handled by an agent."
+    label: "Total Handled"
+    description: "The sum of Conversations (call or chat) handled by an agent."
     type: count
     filters: [status: "finished,failed"]
   }
@@ -213,7 +246,7 @@ view: overal_metrics
   measure: perc_handled
   {
     label: "Handled %"
-    description: "Contacts Handled vs Calls Offered"
+    description: "Contacts Handled vs Contacts Offered"
     type: number
     sql:  ${count_handled}/${count};;
     value_format_name: percent_2
@@ -221,7 +254,7 @@ view: overal_metrics
 
   measure: count_abandoned
   {
-    description: "The sum of calls that were abandoned by the consumer while waiting in queue"
+    description: "The sum of Contacts that were abandoned by the consumer while waiting in queue"
     type: count
     filters: [fail_reason: "eu_abandoned"]
     #drill_fields: [call_detail*,fail_reason,fail_details]
@@ -230,18 +263,48 @@ view: overal_metrics
   measure: perc_abandoned
   {
     label: "Abandoned %"
-    description: "Contacts Abandoned vs Calls Offered"
+    description: "Contacts Abandoned vs Contacts Offered"
     type: number
     sql:  ${count_abandoned}/${count};;
     value_format_name: percent_2
   }
 
-  measure: avg_handle_duration_hhmmss
+  measure: avg_handle_time_hhmmss
   {
     label: "Avg Handle Time HH:MM:SS"
     type: average
-    sql: ${handle_duration_hhmmss} ;;
+    sql: ${handle_time_hhmmss} ;;
     value_format_name: HMS
   }
+
+  measure: avg_queue_duration_hhmmss
+  {
+    label: "Avg Queue Time"
+    type: average
+    sql: ${queue_time_hhmmss} ;;
+    value_format_name: HMS
+  }
+
+
+  measure: count_transfers
+  {
+    label: "Transfers"
+    description: "Total Number of Transfers "
+    type: count
+    filters: [transfer: "Yes"]
+    #drill_fields: [transfer_type,agent_id]
+    value_format_name: decimal_0
+  }
+
+  measure: perc_transfers
+  {
+    label: "Transfer %"
+    description: "Contacts Transfered vs Contacts Offered"
+    type: number
+    sql:  ${count_transfers}/${count};;
+    value_format_name: percent_2
+  }
+
+
 
 }
