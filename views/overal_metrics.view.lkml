@@ -42,6 +42,9 @@ view: overal_metrics
         ,c.menu_path.name
         ,c.assigned_at
         ,c.connected_at
+        ,mt.l1_id,mt.l1_name
+        ,mt.l2_id,mt.l2_name
+        ,mt.l3_id,mt.l3_name
       union all
       SELECT distinct c.id as interaction_id
       ,CAST(c.ends_at AS timestamp) as ended_at
@@ -170,6 +173,24 @@ view: overal_metrics
   dimension: transfer {
     type: yesno
     sql: ${TABLE}.transfer ;;
+  }
+
+  dimension: L1_Group
+  {
+    type: string
+    sql: ${TABLE}.l1_name ;;
+  }
+
+  dimension: L2_Group
+  {
+    type: string
+    sql: ${TABLE}.l2_name ;;
+  }
+
+  dimension: L3_Group
+  {
+    type: string
+    sql: ${TABLE}.l3_name ;;
   }
 
 
