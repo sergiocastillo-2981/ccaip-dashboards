@@ -94,6 +94,7 @@ FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.fmv_agent_activity_logs`
   }
 
   dimension: full_name {
+    label: "Agent Name"
     type: string
     sql: concat(${first_name},' ',${last_name}) ;;
     link: {

@@ -6,6 +6,7 @@ view: v_calls
     sql: SELECT  distinct c.id as call_id
     ,CAST(c.ends_at AS timestamp) as call_ends_at,call_type
     ,disconnected_by
+    ,agent_info.id as agent_id
     ,agent_info.name as agent_info_name
     --,cast(virtual_agent as string) as virtual_agent_name        --when virtual agent not enabled
     ,c.status,c.fail_reason,c.fail_details
@@ -18,7 +19,7 @@ view: v_calls
     ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.assigned_at as timestamp), second),0) handle_duration
     ,ifnull( date_diff(CAST(c.ends_at AS timestamp),CAST(c.connected_at as timestamp), second),0) talk_duration
     --,ifnull(pa.type,'no_agent') as participant_type
-    FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_prev3calls` c
+    FROM `ccaip-reporting-lab.ccaip_laseraway_reporting.t_calls` c
     left JOIN UNNEST (c.queue_durations) AS qd
     left JOIN UNNEST (c.handle_durations) AS hd
     group by
@@ -26,6 +27,7 @@ view: v_calls
     ,c.ends_at
     ,call_type
     ,disconnected_by
+    ,agent_info.id
     ,agent_info.name
     ,cast(virtual_agent as string)
     ,c.status,c.fail_reason,c.fail_details
@@ -238,6 +240,15 @@ view: v_calls
     #sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
     sql: ${TABLE}.agent_info_name ;;
   }
+
+  dimension: agent_id
+  {
+    type: number
+    #sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
+    sql: ${TABLE}.agent_id ;;
+  }
+
+
 
   dimension: fail_reason
   {
