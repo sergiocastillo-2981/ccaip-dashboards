@@ -243,7 +243,7 @@ view: v_calls
 
   dimension: agent_id
   {
-    type: number
+    type: string
     #sql: case when ${agent_type} = 'agent' then ${TABLE}.agent_info_name when ${agent_type} = 'virtual_agent' then ${TABLE}.virtual_agent_name else 'no_agent' end ;;
     sql: ${TABLE}.agent_id ;;
   }

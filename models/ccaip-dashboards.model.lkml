@@ -39,16 +39,16 @@ explore: overal_metrics {
   label: "Overal Metrics"
 }
 
-#explore: agent_performance
-#{
-#  from: v_calls
-#  join: v_agent_activity_logs
-#  {
-#    type: left_outer
-#    sql_on: ${agent_performance.agent_id} = $(v_agent_activity_logs.agent_id) ;;
-#    relationship: one_to_many
-#  }
-#}
+explore: agent_performance
+{
+  from: v_calls
+  join: v_agent_activity_logs
+  {
+    type: left_outer
+    sql_on: ${v_agent_activity_logs.agent_id} = ${agent_performance.agent_id} ;;
+    relationship: one_to_many
+  }
+}
 
 
 named_value_format:HMS{
